@@ -8,6 +8,10 @@ const UserSchema = new mongoose.Schema(
         type: String,
         enum: ["admin", "superAdmin"],
         required: true,
+    },
+    status: {
+      type: Boolean,
+      required: true
     }
   }
 );
