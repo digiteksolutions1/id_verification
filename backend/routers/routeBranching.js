@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { clientRouter } from './client/clientRouter.js'
-import { adminRouter } from './admin/adminRouter.js';
+import clientRouter from './client/clientRouter.js';
+import adminRouter from './admin/adminRouter.js';
 
 const routerBranching = Router();
 

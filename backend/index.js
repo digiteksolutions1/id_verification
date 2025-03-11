@@ -1,5 +1,5 @@
 import express from "express";
-import { routerBranching } from './routers/routeBranching.js';
+import routerBranching from './routers/routeBranching.js';
 
 const app = express();
 const port = 3000;
