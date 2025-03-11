@@ -8,6 +8,6 @@ app.use(express.json());
 
 app.use('/digitek-solutions', routerBranching);
 
-app.listen(port, ()=>{
+app.listen(port, () => {
     console.log(`Server running on port:${port}`);
 });
