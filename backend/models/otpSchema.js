@@ -4,7 +4,8 @@ const OTPSchema = new mongoose.Schema(
   {
     otp_random: { type: String, required: true }, 
     generated_at: { type: Date, default: Date.now }, 
-    expires_at: { type: Date, required: true }, 
+    expires_at: { type: Date, required: true },
+    generated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true } ,
     step: { 
       type: [String], 
       enum: ["ID", "Address", "video"], 
