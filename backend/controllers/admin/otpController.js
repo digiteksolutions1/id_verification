@@ -25,6 +25,22 @@ class OTPController {
       res.status(500).json({ message: "Server error", error });
     }
   }
+
+  static async getAllOTPs(req, res){
+    try {
+      const otpRecords = await OTP.find();
+
+      if ( !otpRecords ){
+        res.status(404).json({message: "No otps found "});
+      }
+
+      res.status(200).json({message: "OTPs found ", data: otpRecords});
+      
+    } catch (error) {
+      console.error("Error getting otps ", error);
+      res.status(500).json({message: "Error getting otps ", error});
+    }
+  }
 }
 
 export default OTPController;
