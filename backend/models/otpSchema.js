@@ -1,18 +1,18 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const OTPSchema = new mongoose.Schema(
   {
     otp_random: { type: String, required: true }, 
     generated_at: { type: Date, default: Date.now }, 
     expires_at: { type: Date, required: true },
-    generated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true } ,
+    generated_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
     step: { 
       type: [String], 
       enum: ["ID", "Address", "video"], 
       required: true,
       validate: { 
         validator: function (steps) {
-          return steps.length > 0; 
+          return steps.length > 0;
         },
         message: "At least one step is required for the OTP."
       } 
@@ -23,4 +23,4 @@ const OTPSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("OTP", OTPSchema);
+export default mongoose.model("OTP", OTPSchema);
