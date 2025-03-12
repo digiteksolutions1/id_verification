@@ -9,7 +9,7 @@ connectDB();
 
 app.use(express.json());
 
-app.use('/digitek-solutions', routerBranching);
+app.use('/digital-accountant', routerBranching);
 
 app.listen(port, () => {
     console.log(`Server running on port:${port}`);

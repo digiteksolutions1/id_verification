@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
   {
@@ -7,13 +7,15 @@ const UserSchema = new mongoose.Schema(
     type: {
         type: String,
         enum: ["admin", "superAdmin"],
-        required: true,
+        required: false,
+        default: "admin"
     },
-    status: {
+    isActive: {
       type: Boolean,
-      required: true
+      required: false,
+      default: true
     }
   }
 );
 
-module.exports = mongoose.model("User", UserSchema);
+export default UserSchema;
