@@ -1,8 +1,11 @@
 import express from "express";
+import connectDB from "./db.js";
 import routerBranching from './routers/routeBranching.js';
 
 const app = express();
 const port = 3000;
+
+connectDB();
 
 app.use(express.json());
 
