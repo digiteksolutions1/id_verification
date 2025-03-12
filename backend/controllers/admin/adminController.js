@@ -1,60 +1,77 @@
+import mongoose from "mongoose";
 import User from "../../models/user.js";
+import AuthSchema from "../../models/auth.js";
 
-class userController{
+class userController {
     static async createAdmin(req, res) {
-        try{
-            const { name, email, type, isActive } = req.body;
+        const session = await mongoose.startSession(); // Start a session for transaction
+        session.startTransaction(); // Begin transaction
 
-            if(!name || !email){
-                return res.status(400).json({message: "Name and email are required!"});
+        try {
+            const { name, email, type, isActive, password } = req.body;
+
+            if (!name || !email || !password) {
+                return res.status(400).json({ message: "Name, email or password are required!" });
             }
 
             const emailFormatted = email.trim().toLowerCase();
-            const existingUser = await User.findOne({ email: emailFormatted });
+            const existingUser = await User.findOne({ email: emailFormatted }).session(session);
 
-            if ( existingUser ){
-                return res.status(400).json({message: "User with the email already exists! "});
+            if (existingUser) {
+                await session.abortTransaction(); // Rollback
+                session.endSession();
+                return res.status(400).json({ message: "User with the email already exists!" });
             }
 
             const admin = new User({
                 name,
-                email,
+                email: emailFormatted,
                 type: type || "admin",
-                isActive: isActive != undefined ? isActive : true,
-            })
+                isActive: isActive !== undefined ? isActive : true,
+            });
 
-            await admin.save();
+            const auth = new AuthSchema({
+                userID: admin._id,
+                password: password,
+            });
 
-            res.status(201).json({message: "Admin created successfully ", admin});
+            await admin.save({ session }); 
+            await auth.save({ session });  
 
-        } catch(error){
-            console.log("Error creating admin");
-            res.status(500).json({message: "Error creating admin", error})
+            await session.commitTransaction(); // Commit transaction
+            session.endSession();
+
+            res.status(201).json({ message: "Admin created successfully", admin });
+        } catch (error) {
+            await session.abortTransaction(); // Rollback changes on error
+            session.endSession();
+            console.log("Error creating admin:", error);
+            res.status(500).json({ message: "Error creating admin", error });
         }
     }
 
-    static async editAdminStatus(req, res){
+    static async editAdminStatus(req, res) {
         try {
             const { userID } = req.params;
 
-            if (!userID){
+            if (!userID) {
                 return res.status(400).json({ message: "user ID not found! " });
             }
 
             const existingUser = await User.findOne({ _id: userID });
 
-            if (!existingUser){
+            if (!existingUser) {
                 return res.status(404).json({ message: "User not found! " });
             }
 
             existingUser.isActive = !existingUser.isActive;
             await existingUser.save();
 
-            res.status(200).json({message: "Admin status updated successfully"});
+            res.status(200).json({ message: "Admin status updated successfully" });
 
         } catch (error) {
             console.log("Error changing status of admin! ");
-            res.status(500).json({message: "Error changing status of admin ", error});
+            res.status(500).json({ message: "Error changing status of admin ", error });
         }
     }
 }
