@@ -4,7 +4,11 @@ import OTP from "../../models/otpSchema.js";
 class OTPController {
   static async generateOTP(req, res) {
     try {
-      const step = req.body.step && req.body.step.length > 0 ? req.body.step : ["ID"]; // Default: ["ID"]
+      const { step, generated_by } = req.body;
+
+      if ( !step || !generated_by ){
+        return res.status(400).json({ message: "step or user id is missing!"} );
+      }
 
       let otp;
       do {
@@ -16,6 +20,7 @@ class OTPController {
       const otpRecord = await OTP.create({
         otp_random: otp,
         expires_at: expiry,
+        generated_by,
         step,
       });
 

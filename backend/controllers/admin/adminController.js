@@ -52,13 +52,13 @@ class userController {
 
     static async editAdminStatus(req, res) {
         try {
-            const { userID } = req.params;
+            const { email } = req.body;
 
-            if (!userID) {
-                return res.status(400).json({ message: "user ID not found! " });
+            if (!email) {
+                return res.status(400).json({ message: "email not found! " });
             }
 
-            const existingUser = await User.findOne({ _id: userID });
+            const existingUser = await User.findOne({ email });
 
             if (!existingUser) {
                 return res.status(404).json({ message: "User not found! " });
