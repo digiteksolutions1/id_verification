@@ -10,17 +10,17 @@ class userController {
 
         try {
             const { name, email, type, isActive, password } = req.body;
-            const userType = AuthController.authenticateToken( req.header("Authorization") );
+            const userType = AuthController.authenticateToken(req.header("Authorization"));
 
             const isValid = userController.verifyUserType(userType, res);
-            if ( !isValid )
+            if (!isValid)
                 return;
 
             if (!name || !email || !password) {
                 return res.status(400).json({ message: "Name, email or password are required!" });
             }
 
-            if ( password.length < 8 ) {
+            if (password.length < 8) {
                 return res.status(400).json({ message: "Password length can't be less than 8" });
             }
 
@@ -45,8 +45,8 @@ class userController {
                 password: password,
             });
 
-            await admin.save({ session }); 
-            await auth.save({ session });  
+            await admin.save({ session });
+            await auth.save({ session });
 
             await session.commitTransaction(); // Commit transaction
             session.endSession();
@@ -63,10 +63,10 @@ class userController {
     static async editAdminStatus(req, res) {
         try {
             const { email } = req.body;
-            const userType = AuthController.authenticateToken( req.header("Authorization") );
+            const userType = AuthController.authenticateToken(req.header("Authorization"));
 
             const isValid = userController.verifyUserType(userType, res);
-            if ( !isValid )
+            if (!isValid)
                 return;
 
             if (!email) {
@@ -92,16 +92,16 @@ class userController {
 
     static async getAdmins(req, res) {
         try {
-            const userType = AuthController.authenticateToken( req.header("Authorization") );
+            const userType = AuthController.authenticateToken(req.header("Authorization"));
 
             const isValid = userController.verifyUserType(userType, res);
-            if ( !isValid )
+            if (!isValid)
                 return;
 
             const admins = await User.find();
 
-            if ( !admins ){
-                return res.status(404).json({ message: "No data found "});
+            if (!admins) {
+                return res.status(404).json({ message: "No data found " });
             }
 
             res.status(200).json({ message: "All admins got successfully!", admins });
@@ -111,13 +111,48 @@ class userController {
         }
     }
 
+    static async deleteAdmin(req, res) {
+        const session = await mongoose.startSession(); // Start a session for transaction
+        session.startTransaction();
+        try {
+            const userType = AuthController.authenticateToken(req.header("Authorization"));
+
+            const isValid = userController.verifyUserType(userType, res);
+            if (!isValid)
+                return;
+
+            const { userId } = req.params;
+            const admin = await User.findOne({ _id: userId }).session(session);
+
+            if (!admin) {
+                await session.abortTransaction(); // Rollback changes
+                session.endSession();
+                return res.status(404).json({ message: "No admin found with the User Id!" });
+            }
+
+            await User.deleteOne({ _id: userId }).session(session);
+            await AuthSchema.deleteOne({ userID: userId }).session(session);
+
+            await session.commitTransaction(); // Commit transaction
+            session.endSession();
+
+            res.status(200).json({ message: "Admin deleted successfully!" });
+        } catch (error) {
+            await session.abortTransaction(); // Rollback on failure
+            session.endSession();
+
+            console.log("Failed tp delete admin!");
+            res.status(500).json({ message: "Failed tp delete admin!", error });
+        }
+    }
+
     static verifyUserType(userType, res) {
         if (!userType) {
             res.status(401).json({ message: "Unauthorized: Invalid or missing token" });
             return false;
         }
 
-        if ( userType !== "superAdmin"){
+        if (userType !== "superAdmin") {
             res.status(403).json({ message: "Access denied" });
             return false;
         }
