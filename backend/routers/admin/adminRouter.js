@@ -9,6 +9,7 @@ adminRouter.post("/generateOTP", OTPController.generateOTP);
 adminRouter.get("/getAllOTPs", OTPController.getAllOTPs);
 adminRouter.post("/createAdmin", userController.createAdmin);
 adminRouter.put("/editAdminStatus", userController.editAdminStatus);
-adminRouter.get("/authenticateAdmin", authController.authenticateAdmin)
+adminRouter.get("/authenticateAdmin", authController.authenticateAdmin);
+adminRouter.get("/getAdmins", userController.getAdmins);
 
 export default adminRouter;

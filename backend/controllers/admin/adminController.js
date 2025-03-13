@@ -90,6 +90,27 @@ class userController {
         }
     }
 
+    static async getAdmins(req, res) {
+        try {
+            const userType = AuthController.authenticateToken( req.header("Authorization") );
+
+            const isValid = userController.verifyUserType(userType, res);
+            if ( !isValid )
+                return;
+
+            const admins = await User.find();
+
+            if ( !admins ){
+                return res.status(404).json({ message: "No data found "});
+            }
+
+            res.status(200).json({ message: "All admins got successfully!", admins });
+        } catch (error) {
+            console.log("Error getting admins! ");
+            res.status(500).json({ message: "Error getting admins!", error });
+        }
+    }
+
     static verifyUserType(userType, res) {
         if (!userType) {
             res.status(401).json({ message: "Unauthorized: Invalid or missing token" });
