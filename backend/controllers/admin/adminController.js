@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import User from "../../models/user.js";
 import AuthSchema from "../../models/auth.js";
+import AuthController from "./authController.js";
 
 class userController {
     static async createAdmin(req, res) {
@@ -9,9 +10,18 @@ class userController {
 
         try {
             const { name, email, type, isActive, password } = req.body;
+            const userType = AuthController.authenticateToken( req.header("Authorization") );
+
+            const isValid = userController.verifyUserType(userType, res);
+            if ( !isValid )
+                return;
 
             if (!name || !email || !password) {
                 return res.status(400).json({ message: "Name, email or password are required!" });
+            }
+
+            if ( password.length < 8 ) {
+                return res.status(400).json({ message: "Password length can't be less than 8" });
             }
 
             const emailFormatted = email.trim().toLowerCase();
@@ -53,6 +63,11 @@ class userController {
     static async editAdminStatus(req, res) {
         try {
             const { email } = req.body;
+            const userType = AuthController.authenticateToken( req.header("Authorization") );
+
+            const isValid = userController.verifyUserType(userType, res);
+            if ( !isValid )
+                return;
 
             if (!email) {
                 return res.status(400).json({ message: "email not found! " });
@@ -73,6 +88,20 @@ class userController {
             console.log("Error changing status of admin! ");
             res.status(500).json({ message: "Error changing status of admin ", error });
         }
+    }
+
+    static verifyUserType(userType, res) {
+        if (!userType) {
+            res.status(401).json({ message: "Unauthorized: Invalid or missing token" });
+            return false;
+        }
+
+        if ( userType !== "superAdmin"){
+            res.status(403).json({ message: "Access denied" });
+            return false;
+        }
+
+        return true;
     }
 }
 

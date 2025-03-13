@@ -1,13 +1,21 @@
 import crypto from "crypto";
 import OTP from "../../models/otpSchema.js";
+import AuthController from "./authController.js";
+import UserController from "./adminController.js";
 
 class OTPController {
   static async generateOTP(req, res) {
     try {
       const { step, generated_by } = req.body;
 
-      if ( !step || !generated_by ){
-        return res.status(400).json({ message: "step or user id is missing!"} );
+      const userType = AuthController.authenticateToken(req.header("Authorization"));
+
+      const isValid = UserController.verifyUserType(userType, res);
+      if (!isValid)
+        return;
+
+      if (!step || !generated_by) {
+        return res.status(400).json({ message: "step or user id is missing!" });
       }
 
       let otp;
@@ -22,6 +30,7 @@ class OTPController {
         expires_at: expiry,
         generated_by,
         step,
+        generated_for: "manual"
       });
 
       res.status(201).json({ otpRecord });
@@ -31,19 +40,25 @@ class OTPController {
     }
   }
 
-  static async getAllOTPs(req, res){
+  static async getAllOTPs(req, res) {
     try {
+      const userType = AuthController.authenticateToken(req.header("Authorization"));
+
+      const isValid = UserController.verifyUserType(userType, res);
+      if (!isValid)
+        return;
+
       const otpRecords = await OTP.find();
 
-      if ( !otpRecords ){
-        res.status(404).json({message: "No otps found "});
+      if (!otpRecords) {
+        res.status(404).json({ message: "No otps found " });
       }
 
-      res.status(200).json({message: "OTPs found ", data: otpRecords});
-      
+      res.status(200).json({ message: "OTPs found ", data: otpRecords });
+
     } catch (error) {
       console.error("Error getting otps ", error);
-      res.status(500).json({message: "Error getting otps ", error});
+      res.status(500).json({ message: "Error getting otps ", error });
     }
   }
 }

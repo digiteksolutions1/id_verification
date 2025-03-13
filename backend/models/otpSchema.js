@@ -17,6 +17,11 @@ const OTPSchema = new mongoose.Schema(
         message: "At least one step is required for the OTP."
       } 
     }, 
+    generated_for: { 
+      type: String, 
+      enum: ["manual", "forgetPass", "trigger"], 
+      required: true,
+    }, 
     isValid: { type: Boolean, default: true }, 
     used_at: { type: Date }, 
   },
