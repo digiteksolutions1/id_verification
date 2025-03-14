@@ -146,6 +146,38 @@ class userController {
         }
     }
 
+    static async promoteOrDemoteAdmin(req, res) {
+        try {
+            const userType = AuthController.authenticateToken(req.header("Authorization"));
+
+            const isValid = userController.verifyUserType(userType, res);
+            if (!isValid)
+                return;
+
+            const { userId, type } = req.body;
+            const admin = await User.findById( userId );
+
+            if ( !admin ) {
+                return res.status(404).json({ message: "No admin found!" });
+            }
+
+            if (admin.type == type){
+                return res.status(403).json({ message: "The user type is already the same as provided!" });
+            }
+
+            const updatedAdmin = await User.findByIdAndUpdate( userId, { $set:  { type: type } }, { new: true });
+            if (!updatedAdmin) {
+                return res.status(400).json({ message: "No changes made. Check user type value." });
+            }
+
+            res.status(200).json({ message: "Admin type updated successfully!" });
+
+        } catch (error) {
+            console.error("Failed to promote or demote admin!", error);
+            res.status(500).json({ message: "Failed to promote or demote admin!", error });
+        }
+    }
+
     static verifyUserType(userType, res) {
         if (!userType) {
             res.status(401).json({ message: "Unauthorized: Invalid or missing token" });

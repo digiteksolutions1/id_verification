@@ -12,5 +12,6 @@ adminRouter.put("/editAdminStatus", userController.editAdminStatus);
 adminRouter.get("/authenticateAdmin", authController.authenticateAdmin);
 adminRouter.get("/getAdmins", userController.getAdmins);
 adminRouter.delete("/deleteAdmin/:userId", userController.deleteAdmin);
+adminRouter.put("/promoteOrDemoteAdmin", userController.promoteOrDemoteAdmin);
 
 export default adminRouter;
