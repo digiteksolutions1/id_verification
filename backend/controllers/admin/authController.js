@@ -1,8 +1,9 @@
 import AuthSchema from "../../models/auth.js";
 import User from "../../models/user.js";
-import jwt, { decode } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
+import bcrypt from "bcrypt";
 
 dotenv.config();
 
@@ -116,6 +117,48 @@ class authController {
         } catch (error) {
             console.error("Failed to send the reset password token!", error);
             res.status(500).json({ message: "Failed to send the reset password token!", error });
+        }
+    }
+
+    static async resetPassword(req, res) {
+        try {
+            const { token, newPassword } = req.body;
+
+            if (!token || !newPassword) {
+                return res.status(400).json({ message: "Token and new password are required!" });
+            }
+
+            const userAuth = await AuthSchema.findOne({ resetPasswordToken: token });
+
+            if (!userAuth) {
+                return res.status(400).json({ message: "Invalid token!" });
+            }
+
+            if (userAuth.resetPasswordExpires < Date.now()) {
+                return res.status(400).json({ message: "Token has expired. Request a new one!" });
+            }
+
+            if (!userAuth.isValid) {
+                return res.status(400).json({ message: "Token has already been used!" });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+            // Update the user's password & invalidate token
+            await AuthSchema.updateOne(
+                { _id: userAuth._id },
+                {
+                    $set: { password: hashedPassword, isValid: false },
+                    $unset: { resetPasswordToken: "", resetPasswordExpires: "" } 
+                }
+            );
+
+            res.status(200).json({ message: "Password reset successfully!" });
+
+        } catch (error) {
+            console.error("Failed to reset password!", error);
+            res.status(500).json({ message: "Failed to reset password!", error });
         }
     }
 }
