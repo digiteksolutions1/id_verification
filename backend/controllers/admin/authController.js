@@ -2,6 +2,7 @@ import AuthSchema from "../../models/auth.js";
 import User from "../../models/user.js";
 import jwt, { decode } from "jsonwebtoken";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -61,6 +62,60 @@ class authController {
             return decoded.type;
         } catch (error) {
             return null;
+        }
+    }
+
+    static async forgetPassword(req, res) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ message: "Email required!" });
+            }
+
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(404).json({ message: "User not found for the given email!" });
+            }
+
+            let userAuth = await AuthSchema.findOne({ userID: user._id });
+            if (!userAuth) {
+                return res.status(404).json({ message: "User authentication record not found!" });
+            }
+
+            userAuth.generatePasswordResetToken();
+            await userAuth.save();
+
+            // Create reset link
+            const resetLink = `${process.env.FRONTEND_URL}/reset-password/${userAuth.resetPasswordToken}`;
+
+            // Correct Gmail SMTP settings
+            const transporter = nodemailer.createTransport({
+                host: "smtp.gmail.com",
+                port: 587,
+                secure: false,
+                auth: {
+                    user: process.env.EMAIL_USER, // Your Google-hosted email
+                    pass: process.env.USER_PASS, // Use App Password
+                },
+                tls: {
+                    rejectUnauthorized: false, // Avoids certificate errors
+                },
+            });
+
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: "Password Reset Request",
+                text: `Click the following link to reset your password: ${resetLink}`,
+            };
+
+            await transporter.sendMail(mailOptions);
+
+            res.status(200).json({ message: "Password reset link sent successfully!" });
+
+        } catch (error) {
+            console.error("Failed to send the reset password token!", error);
+            res.status(500).json({ message: "Failed to send the reset password token!", error });
         }
     }
 }

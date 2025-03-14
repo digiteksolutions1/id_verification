@@ -1,10 +1,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 const AuthSchema = new mongoose.Schema(
   {
     userID: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    password: { type: String, required: true, trim: true }
+    password: { type: String, required: true, trim: true },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
+    isValid: { type: Boolean, default: true }
   },
   { timestamps: true } 
 );
@@ -30,6 +34,12 @@ AuthSchema.methods.comparePassword = async function (enteredPassword) {
     console.error("Error comparing passwords:", err);
     return false; // Return false on error
   }
+};
+
+// Generate a reset token
+AuthSchema.methods.generatePasswordResetToken = function () {
+    this.resetPasswordToken = crypto.randomBytes(32).toString("hex");
+    this.resetPasswordExpires = Date.now() + 3600000; // 1 hour expiry
 };
 
 export default mongoose.model("Auth", AuthSchema);
