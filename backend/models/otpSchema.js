@@ -19,11 +19,12 @@ const OTPSchema = new mongoose.Schema(
     }, 
     generated_for: { 
       type: String, 
-      enum: ["manual", "forgetPass", "trigger"], 
+      enum: ["manual", "trigger"], 
       required: true,
     }, 
     isValid: { type: Boolean, default: true }, 
     used_at: { type: Date }, 
+    last_step: { type: String },
   },
   { timestamps: true }
 );

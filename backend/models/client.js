@@ -4,6 +4,7 @@ const ClientSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     dob: { type: Date, required: true },
+    otp_id: { type: mongoose.Schema.Types.ObjectId, ref: "OTP", required: true },
 
     idDocument: {
       type: {
