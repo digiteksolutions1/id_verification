@@ -26,9 +26,14 @@ class ClientController {
                 return res.status(400).json({ message: "OTP not found" });
             }
 
+            const existingUser = await Client.findOne({ otp_id: otp_ID });
+            if(existingUser){
+                return res.status(200).json({ message: "User already exists!", existingUser });
+            }
+
             const user = await Client.create({
                 name,
-                dob: formattedDob, // Store correctly formatted UTC date
+                dob: formattedDob, 
                 otp_id: otp_ID
             });
 
