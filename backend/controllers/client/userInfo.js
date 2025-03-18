@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import Client from "../../models/client.js";
 import otpSchema from "../../models/otpSchema.js";
 
@@ -27,13 +29,13 @@ class ClientController {
             }
 
             const existingUser = await Client.findOne({ otp_id: otp_ID });
-            if(existingUser){
+            if (existingUser) {
                 return res.status(200).json({ message: "User already exists!", existingUser });
             }
 
             const user = await Client.create({
                 name,
-                dob: formattedDob, 
+                dob: formattedDob,
                 otp_id: otp_ID
             });
 
@@ -42,6 +44,88 @@ class ClientController {
         } catch (error) {
             console.error("Server Error", error);
             res.status(500).json({ message: "Server error", error });
+        }
+    }
+
+    static async uploadIdDoc(req, res) {
+        try {
+            const { otp_Id } = req.body;
+
+            if (!otp_Id || !req.file) {
+                return res.status(400).json({ message: "Both otp_Id and an ID document are required!" });
+            }
+
+            const client = await Client.findOne({ otp_id: otp_Id });
+            if (!client) {
+                return res.status(404).json({ message: "Client not found!" });
+            }
+
+            if (!client.name) {
+                return res.status(400).json({ message: "Client name is missing!" });
+            }
+
+            const date = new Date();
+            const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
+            const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9-_ ]/g, "");
+            const clientFolder = path.join("clients", `${formattedDate}-${sanitizedClientName}`);
+            await fs.promises.mkdir(clientFolder, { recursive: true });
+
+            const uniqueFileName = `ID-${formattedDate}-${req.file.originalname}`;
+            const filePath = path.join(clientFolder, uniqueFileName);
+
+            await fs.promises.writeFile(filePath, req.file.buffer);
+
+            client.idDocument = filePath;
+            await client.save();
+
+            res.status(200).json({ message: "Client ID uploaded successfully!", client });
+        } catch (error) {
+            console.error("Server error!", error);
+            res.status(500).json({ message: "Server error!", error: error.message });
+        }
+    }
+
+    static async uploadAddressProof(req, res) {
+        try {
+            const { otp_Id } = req.body;
+
+            if (!otp_Id || !req.file) {
+                return res.status(400).json({ message: "Both otp_Id and an ID document are required!" });
+            }
+
+            const client = await Client.findOne({ otp_id: otp_Id });
+            if (!client) {
+                return res.status(404).json({ message: "Client not found!" });
+            }
+
+            if (!client.name) {
+                return res.status(400).json({ message: "Client name is missing!" });
+            }
+
+            const date = new Date();
+            const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
+            const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9-_ ]/g, "");
+            const clientFolder = path.join("clients", `${formattedDate}-${sanitizedClientName}`);
+            await fs.promises.mkdir(clientFolder, { recursive: true });
+
+            const uniqueFileName = `address-${formattedDate}-${req.file.originalname}`;
+            const filePath = path.join(clientFolder, uniqueFileName);
+
+            await fs.promises.writeFile(filePath, req.file.buffer);
+
+            client.addressDocument = filePath;
+            await client.save();
+
+            res.status(200).json({ message: "Client ID uploaded successfully!", client });
+        } catch (error) {
+            console.error("Server error!", error);
+            res.status(500).json({ message: "Server error!", error: error.message });
         }
     }
 }

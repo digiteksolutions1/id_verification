@@ -6,23 +6,8 @@ const ClientSchema = new mongoose.Schema(
     dob: { type: Date, required: true },
     otp_id: { type: mongoose.Schema.Types.ObjectId, ref: "OTP", required: true },
 
-    idDocument: {
-      type: {
-        type: String,
-        enum: ["NIC", "Passport", "Driver's License"],
-        required: false,
-      },
-      documentUrl: { type: String, required: false },
-    },
-
-    addressDocument: {
-      type: {
-        type: String,
-        enum: ["Utility Bill", "Phone Bill", "Bank Statement"],
-        required: false,
-      },
-      documentUrl: { type: String, required: false },
-    },
+    idDocument: { type: String, required: false},
+    addressDocument: { type: String, required: false},
 
     videoVerification: {
       videoUrl: { type: String, required: false },
