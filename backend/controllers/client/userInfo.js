@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import fs from "fs";
 import path from "path";
 import Client from "../../models/client.js";
@@ -48,6 +49,8 @@ class ClientController {
     }
 
     static async uploadIdDoc(req, res) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
         try {
             const { otp_Id } = req.body;
 
@@ -55,12 +58,14 @@ class ClientController {
                 return res.status(400).json({ message: "Both otp_Id and an ID document are required!" });
             }
 
-            const client = await Client.findOne({ otp_id: otp_Id });
+            const client = await Client.findOne({ otp_id: otp_Id }).session(session);
             if (!client) {
+                await session.abortTransaction();
                 return res.status(404).json({ message: "Client not found!" });
             }
 
             if (!client.name) {
+                await session.abortTransaction();
                 return res.status(400).json({ message: "Client name is missing!" });
             }
 
@@ -75,33 +80,48 @@ class ClientController {
 
             const uniqueFileName = `ID-${formattedDate}-${req.file.originalname}`;
             const filePath = path.join(clientFolder, uniqueFileName);
-
             await fs.promises.writeFile(filePath, req.file.buffer);
 
-            client.idDocument = filePath;
-            await client.save();
+            const otp = await otpSchema.findById(otp_Id).session(session);
+            if (otp) {
+                otp.last_step = "ID Doc";
+                await otp.save({ session });
+            }
 
-            res.status(200).json({ message: "Client ID uploaded successfully!", client });
+            client.idDocument = filePath;
+            await client.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+
+            res.status(200).json({ message: "Client ID uploaded successfully!", client, otp });
         } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+
             console.error("Server error!", error);
             res.status(500).json({ message: "Server error!", error: error.message });
         }
     }
 
     static async uploadAddressProof(req, res) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
         try {
             const { otp_Id } = req.body;
 
             if (!otp_Id || !req.file) {
-                return res.status(400).json({ message: "Both otp_Id and an ID document are required!" });
+                return res.status(400).json({ message: "Both otp_Id and an address document are required!" });
             }
 
-            const client = await Client.findOne({ otp_id: otp_Id });
+            const client = await Client.findOne({ otp_id: otp_Id }).session(session);
             if (!client) {
+                await session.abortTransaction();
                 return res.status(404).json({ message: "Client not found!" });
             }
 
             if (!client.name) {
+                await session.abortTransaction();
                 return res.status(400).json({ message: "Client name is missing!" });
             }
 
@@ -114,16 +134,28 @@ class ClientController {
             const clientFolder = path.join("clients", `${formattedDate}-${sanitizedClientName}`);
             await fs.promises.mkdir(clientFolder, { recursive: true });
 
-            const uniqueFileName = `address-${formattedDate}-${req.file.originalname}`;
+            const uniqueFileName = `Address-${formattedDate}-${req.file.originalname}`;
             const filePath = path.join(clientFolder, uniqueFileName);
-
             await fs.promises.writeFile(filePath, req.file.buffer);
 
-            client.addressDocument = filePath;
-            await client.save();
+            const otp = await otpSchema.findById(otp_Id).session(session);
+            if (otp) {
+                otp.last_step = "Address Proof";
+                await otp.save({ session });
+            }
 
-            res.status(200).json({ message: "Client ID uploaded successfully!", client });
+            client.addressDocument = filePath;
+            await client.save({ session });
+
+            // Commit transaction
+            await session.commitTransaction();
+            session.endSession();
+
+            res.status(200).json({ message: "Client Address Proof uploaded successfully!", client, otp });
         } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+
             console.error("Server error!", error);
             res.status(500).json({ message: "Server error!", error: error.message });
         }
