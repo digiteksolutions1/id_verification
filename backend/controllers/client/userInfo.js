@@ -75,7 +75,7 @@ class ClientController {
                 .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
 
             const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9-_ ]/g, "");
-            const clientFolder = path.join("clients", `${formattedDate}-${sanitizedClientName}`);
+            const clientFolder = path.join("clients", `${sanitizedClientName}`);
             await fs.promises.mkdir(clientFolder, { recursive: true });
 
             const uniqueFileName = `ID-${formattedDate}-${req.file.originalname}`;
@@ -131,7 +131,7 @@ class ClientController {
                 .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
 
             const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9-_ ]/g, "");
-            const clientFolder = path.join("clients", `${formattedDate}-${sanitizedClientName}`);
+            const clientFolder = path.join("clients", `${sanitizedClientName}`);
             await fs.promises.mkdir(clientFolder, { recursive: true });
 
             const uniqueFileName = `Address-${formattedDate}-${req.file.originalname}`;
@@ -158,6 +158,90 @@ class ClientController {
 
             console.error("Server error!", error);
             res.status(500).json({ message: "Server error!", error: error.message });
+        }
+    }
+
+    static async livenessCheck(req, res) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const { otp_Id } = req.body;
+
+            if (!otp_Id) {
+                return res.status(400).json({ message: "OTP ID is required!" });
+            }
+
+            if (!req.files || !req.files.video || !req.files.front || !req.files.left || !req.files.right) {
+                return res.status(400).json({ message: "All required files (video, front, left, right) must be uploaded!" });
+            }
+
+            const client = await Client.findOne({ otp_id: otp_Id });
+            if (!client) {
+                await session.abortTransaction();
+                return res.status(404).json({ message: "Client not found!" });
+            }
+
+            if (!client.name) {
+                await session.abortTransaction();
+                return res.status(400).json({ message: "Client name is missing!" });
+            }
+
+            const date = new Date();
+            const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
+            const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9-_ ]/g, "");
+
+            const clientFolder = path.join("clients", sanitizedClientName);
+            await fs.promises.mkdir(clientFolder, { recursive: true });
+
+            const videoFile = req.files.video[0];
+            const videoPath = path.join(clientFolder, `Video-${formattedDate}-${videoFile.originalname}`);
+            await fs.promises.writeFile(videoPath, videoFile.buffer);
+
+            const frontFile = req.files.front[0];
+            const leftFile = req.files.left[0];
+            const rightFile = req.files.right[0];
+
+            const frontPath = path.join(clientFolder, `Front-${formattedDate}-${frontFile.originalname}`);
+            const leftPath = path.join(clientFolder, `Left-${formattedDate}-${leftFile.originalname}`);
+            const rightPath = path.join(clientFolder, `Right-${formattedDate}-${rightFile.originalname}`);
+
+            await fs.promises.writeFile(frontPath, frontFile.buffer);
+            await fs.promises.writeFile(leftPath, leftFile.buffer);
+            await fs.promises.writeFile(rightPath, rightFile.buffer);
+
+            const otp = await otpSchema.findById(otp_Id).session(session);
+            if (!otp) {
+                await session.abortTransaction();
+                return res.status(400).json({ message: "Invalid OTP ID!" });
+            }
+            otp.last_step = "liveness Proof";
+            otp.isValid = false;
+            await otp.save({ session });
+
+            // Update client record
+            client.videoVerification = {
+                videoUrl: videoPath,
+                images: {
+                    front: frontPath,
+                    left: leftPath,
+                    right: rightPath
+                }
+            };
+
+            await client.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+            res.status(200).json({ message: "Video and photos uploaded successfully", client });
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+
+            console.error("Server error", error);
+            res.status(500).json({ message: "Server error", error });
         }
     }
 }
